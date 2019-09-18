@@ -1,5 +1,10 @@
 
 if(!require(windscape)) devtools::install_github("matthewkling/windscape")
+if(!require(shinydashboard)) install.packages("shinydashboard")
+if(!require(shinythemes)) install.packages("shinythemes")
+if(!require(gdistance)) install.packages("gdistance")
+if(!require(geosphere)) install.packages("geosphere")
+
 
 library(shiny)
 library(shinythemes)
@@ -8,7 +13,6 @@ library(raster)
 library(tidyverse)
 library(windscape)
 library(gdistance)
-
 library(shinydashboard)
 
 
