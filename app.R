@@ -18,8 +18,8 @@ crs(s) <- ll
 
 bg <- "black"
 
-#downwind <- readRDS("data/downwind.rds")
-#upwind <- readRDS("data/upwind.rds")
+downwind <- readRDS("data/downwind_annual.rds")
+upwind <- readRDS("data/upwind_annual.rds")
 datasets <- tibble(path = list.files("data", full.names=T, pattern="rds"),
                    info = str_replace_all(path, "data/|\\.rds", "")) %>%
    separate(info, c("direction", "season"))
@@ -47,10 +47,8 @@ ui <- navbarPage("windscape [beta]",
                                      "),
                           
                           column(2,
-                                 selectInput("direction", "windshed direction",
-                                             c("downwind", "upwind"),
-                                             sample(c("downwind", "upwind"), 1)),
-                                 selectInput("season", "season", unique(datasets$season), "annual"),
+                                 selectInput("direction", "windshed direction", unique(datasets$direction)),
+                                 selectInput("season", "season", unique(datasets$season)),
                                  selectInput("colortrans", "color ramp transformation",
                                              c("square root", "linear", "log10")),
                                  selectInput("palette", "color palette",
@@ -106,14 +104,14 @@ server <- function(input, output) {
    })
    
    windshed <- reactive({
-      trans <- datasets %>%
-         filter(direction == input$direction,
-                season == input$season) %>%
-         pull(path) %>%
-         readRDS()
-      #trans <- switch(input$direction,
-      #                "downwind (outbound)" = downwind,
-      #                "upwind (inbound)" = upwind)
+      #trans <- datasets %>%
+      #   filter(direction == input$direction,
+      #          season == input$season) %>%
+      #   pull(path) %>%
+      #   readRDS()
+      trans <- switch(input$direction,
+                      "downwind" = downwind,
+                      "upwind" = upwind)
       w <- accCost(trans, site$ll) %>% "/"(3600)
       d1 <- crop(w, extent(-360, 0, -90, 90)) %>% shift(360)
       d2 <- crop(w, extent(0, 360, -90, 90))
