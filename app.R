@@ -9,7 +9,6 @@ library(gdistance)
 library(shinydashboard)
 
 
-
 # initalize location
 s <- data.frame(lat=37.871444, lon=-122.262277)
 s <- data.frame(lat=runif(1, -40, 40), lon=runif(1, -140, 140))
