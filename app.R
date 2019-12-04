@@ -8,6 +8,7 @@ library(windscape)
 library(gdistance)
 library(shinydashboard)
 
+
 # initalize location
 s <- data.frame(lat=37.871444, lon=-122.262277)
 s <- data.frame(lat=runif(1, -40, 40), lon=runif(1, -140, 140))
@@ -19,10 +20,10 @@ bg <- "black"
 
 downwind <- readRDS("data/downwind_annual.rds")
 upwind <- readRDS("data/upwind_annual.rds")
+
 datasets <- tibble(path = list.files("data", full.names=T, pattern="rds"),
                    info = str_replace_all(path, "data/|\\.rds", "")) %>%
    separate(info, c("direction", "season"))
-
 
 ui <- navbarPage("windscape [beta]",
                  theme = shinytheme("slate"),
@@ -46,7 +47,9 @@ ui <- navbarPage("windscape [beta]",
                                      "),
                           
                           column(2,
-                                 selectInput("direction", "windshed direction", unique(datasets$direction)),
+                                 selectInput("direction", "windshed type",
+                                             c("downwind (outbound)", "upwind (inbound)"),
+                                             sample(c("downwind (outbound)", "upwind (inbound)"), 1)),
                                  selectInput("season", "season", unique(datasets$season)),
                                  selectInput("colortrans", "color ramp transformation",
                                              c("square root", "linear", "log10")),
@@ -103,14 +106,9 @@ server <- function(input, output) {
    })
    
    windshed <- reactive({
-      #trans <- datasets %>%
-      #   filter(direction == input$direction,
-      #          season == input$season) %>%
-      #   pull(path) %>%
-      #   readRDS()
       trans <- switch(input$direction,
-                      "downwind" = downwind,
-                      "upwind" = upwind)
+                      "downwind (outbound)" = downwind,
+                      "upwind (inbound)" = upwind)
       w <- accCost(trans, site$ll) %>% "/"(3600)
       d1 <- crop(w, extent(-360, 0, -90, 90)) %>% shift(360)
       d2 <- crop(w, extent(0, 360, -90, 90))
