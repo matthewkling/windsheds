@@ -18,12 +18,8 @@ crs(s) <- ll
 
 bg <- "black"
 
-downwind <- readRDS("data/downwind_annual.rds")
-upwind <- readRDS("data/upwind_annual.rds")
-
-datasets <- tibble(path = list.files("data", full.names=T, pattern="rds"),
-                   info = str_replace_all(path, "data/|\\.rds", "")) %>%
-   separate(info, c("direction", "season"))
+downwind <- readRDS("data/downwind.rds")
+upwind <- readRDS("data/upwind.rds")
 
 ui <- navbarPage("windscape [beta]",
                  theme = shinytheme("slate"),
@@ -50,7 +46,6 @@ ui <- navbarPage("windscape [beta]",
                                  selectInput("direction", "windshed type",
                                              c("downwind (outbound)", "upwind (inbound)"),
                                              sample(c("downwind (outbound)", "upwind (inbound)"), 1)),
-                                 selectInput("season", "season", unique(datasets$season)),
                                  selectInput("colortrans", "color ramp transformation",
                                              c("square root", "linear", "log10")),
                                  selectInput("palette", "color palette",
