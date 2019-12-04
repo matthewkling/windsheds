@@ -64,23 +64,23 @@ ui <- navbarPage("windscape [beta]",
                           )
                  ),
                  tabPanel( "about",
+                           column(6,
+                                  "This tool geneates maps of 'windsheds'.",
+                                  "Just as any location on a landscape has an upstream watershed and a downstream delta,",
+                                  "it also has an upwind and downwind dispersal catchment representing areas of likely inbound and outbound wind dispersal.",
+                                  "Click the map to select a location and view its wind dispersal landscape.",
+                                  "These values are measured in 'wind hours' -- the time to reach a given location traveling by suface winds.",
+                                  "The model integrates over decades of hourly wind data to estimate long-term average wind travel times between locations.",
+                                  br(), br(),
+                                  "This model uses landscape connectivity algorithms based on graph therory as implemented in the",
+                                  a("windscape", href="https://github.com/matthewkling/windscape"), 
+                                  "R package, in combination with decades of hourly wind data from the",
+                                  a("Climate Forecast System Renanalysis.", href="https://cfs.ncep.noaa.gov/cfsr/"),
+                                  br(), br(),
+                                  "Created by", a("Matthew Kling.", href="http://matthewkling.net")),
                            
-                           imageOutput("image"),
-                           br(),
-                           "This tool geneates maps of 'windsheds'.",
-                           "Just as any location on a landscape has an upstream watershed and a downstream delta,",
-                           "it also has an upwind and downwind dispersal catchment representing areas of likely inbound and outbound wind dispersal.",
-                           "Click the map to select a location and view its wind dispersal landscape.",
-                           "These values are measured in 'wind hours' -- the time to reach a given location traveling by suface winds.",
-                           "The model integrates over decades of hourly wind data to estimate long-term average wind travel times between locations.",
-                           br(), br(),
-                           "This model uses landscape connectivity algorithms based on graph therory as implemented in the",
-                           a("windscape", href="https://github.com/matthewkling/windscape"), 
-                           "R package, in combination with decades of hourly wind data from the",
-                           a("Climate Forecast System Renanalysis.", href="https://cfs.ncep.noaa.gov/cfsr/"),
-                           br(), br(),
-                           "Created by", a("Matthew Kling.", href="http://matthewkling.net")
-                           
+                           column(6, 
+                                  imageOutput("image"))
                  )
                  
 )
@@ -89,7 +89,7 @@ server <- function(input, output) {
    
    # image on about page
    output$image <- renderImage({
-      list(src = "www/img.jpg",
+      list(src = "www/image.png",
            alt = "windscape")
    }, deleteFile = FALSE)
    
@@ -154,8 +154,8 @@ server <- function(input, output) {
    observe({
       
       if(input$palette == "<none>"){
-         
-         leafletProxy("map") %>%
+      
+            leafletProxy("map") %>%
             clearImages() %>%
             clearControls()
          
