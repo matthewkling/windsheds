@@ -10,8 +10,10 @@ library(shinydashboard)
 
 
 # initalize location
-s <- data.frame(lat=37.871444, lon=-122.262277)
-s <- data.frame(lat=runif(1, -40, 40), lon=runif(1, -140, 140))
+# s <- data.frame(lat=37.871444, lon=-122.262277)
+# s <- data.frame(lat=67.89, lon=-123.45)
+s <- data.frame(lat = runif(1, -40, 40) %>% round(2), 
+                lon = runif(1, -140, 140) %>% round(2))
 coordinates(s) <- c("lon", "lat")
 ll <- crs("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 crs(s) <- ll
@@ -43,6 +45,12 @@ ui <- navbarPage("windscape [beta]",
                                      "),
                           
                           column(2,
+                                 textInput("lonlat", 
+                                           "location (click map or enter Lon, Lat)",
+                                           paste(s$lon, s$lat, sep = ", ")),
+                                 actionButton("go", "go"),
+                                 br(), br(),
+                                 
                                  selectInput("direction", "windshed type",
                                              c("downwind (outbound)", "upwind (inbound)"),
                                              sample(c("downwind (outbound)", "upwind (inbound)"), 1)),
@@ -53,7 +61,9 @@ ui <- navbarPage("windscape [beta]",
                                              "rainbow"),
                                  sliderInput("opacity", "color opacity", 0, 1, .5),
                                  sliderInput("contours", "number of contours", 0, 100, 50),
-                                 downloadButton("downloadData", "Download raster")
+                                 downloadButton("downloadData", "Download raster"),
+                                 # br(), br(),
+                                 # textOutput("coords")
                           ),
                           
                           column(10,
@@ -82,7 +92,7 @@ ui <- navbarPage("windscape [beta]",
                  
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
    
    # image on about page
    output$image <- renderImage({
@@ -90,14 +100,27 @@ server <- function(input, output) {
            alt = "windscape")
    }, deleteFile = FALSE)
    
-   site <- reactiveValues(point = s, ll=coordinates(s))
+   site <- reactiveValues(point = s, ll = coordinates(s))
+   
+   # output$coords <- renderText({ paste0("location: ", round(site$ll[1], 2), "\u00B0E, ", round(site$ll[2], 2), "\u00B0N") })
+   # output$coords <- reactive({ paste0(round(site$ll[1], 2), ", ", round(site$ll[2], 2)) })
    
    observeEvent(input$map_click, {
       s <- data.frame(lat=input$map_click$lat, lon=input$map_click$lng)
+      updateTextInput(session, "lonlat", value = paste(round(s$lon, 2), round(s$lat, 2), sep = ", "))
       coordinates(s) <- c("lon", "lat")
       crs(s) <- ll
       site$point <- s
       site$ll <- coordinates(s)
+   })
+   
+   observeEvent(input$go, {
+         crds <- as.numeric(str_split(input$lonlat, ", ")[[1]])
+         s <- data.frame(lat=crds[2], lon=crds[1])
+         coordinates(s) <- c("lon", "lat")
+         crs(s) <- ll
+         site$point <- s
+         site$ll <- coordinates(s)
    })
    
    windshed <- reactive({
