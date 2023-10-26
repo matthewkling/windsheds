@@ -9,9 +9,7 @@ library(gdistance)
 library(shinydashboard)
 
 
-# initalize location
-# s <- data.frame(lat=37.871444, lon=-122.262277)
-# s <- data.frame(lat=67.89, lon=-123.45)
+# initialize random location
 s <- data.frame(lat = runif(1, -40, 40) %>% round(2), 
                 lon = runif(1, -140, 140) %>% round(2))
 coordinates(s) <- c("lon", "lat")
@@ -62,8 +60,6 @@ ui <- navbarPage("windscape [beta]",
                                  sliderInput("opacity", "color opacity", 0, 1, .5),
                                  sliderInput("contours", "number of contours", 0, 100, 50),
                                  downloadButton("downloadData", "Download raster"),
-                                 # br(), br(),
-                                 # textOutput("coords")
                           ),
                           
                           column(10,
@@ -93,154 +89,152 @@ ui <- navbarPage("windscape [beta]",
 )
 
 server <- function(input, output, session) {
-   
-   # image on about page
-   output$image <- renderImage({
-      list(src = "www/img.jpg",
-           alt = "windscape")
-   }, deleteFile = FALSE)
-   
-   site <- reactiveValues(point = s, ll = coordinates(s))
-   
-   # output$coords <- renderText({ paste0("location: ", round(site$ll[1], 2), "\u00B0E, ", round(site$ll[2], 2), "\u00B0N") })
-   # output$coords <- reactive({ paste0(round(site$ll[1], 2), ", ", round(site$ll[2], 2)) })
-   
-   observeEvent(input$map_click, {
-      s <- data.frame(lat=input$map_click$lat, lon=input$map_click$lng)
-      updateTextInput(session, "lonlat", value = paste(round(s$lon, 2), round(s$lat, 2), sep = ", "))
-      coordinates(s) <- c("lon", "lat")
-      crs(s) <- ll
-      site$point <- s
-      site$ll <- coordinates(s)
-   })
-   
-   observeEvent(input$go, {
-         crds <- as.numeric(str_split(input$lonlat, ", ")[[1]])
-         s <- data.frame(lat=crds[2], lon=crds[1])
-         coordinates(s) <- c("lon", "lat")
-         crs(s) <- ll
-         site$point <- s
-         site$ll <- coordinates(s)
-   })
-   
-   windshed <- reactive({
-      trans <- switch(input$direction,
-                      "downwind (outbound)" = downwind,
-                      "upwind (inbound)" = upwind)
-      w <- accCost(trans, site$ll) %>% "/"(3600)
-      d1 <- crop(w, extent(-360, 0, -90, 90)) %>% shift(360)
-      d2 <- crop(w, extent(0, 360, -90, 90))
-      w <- min(stack(d1, d2)) %>% rotate()
-      w
-   })
-   
-   
-   w <- reactive({
-      withProgress(message = "PROCESSING:", detail="generating windshed",
-                   value = 1, {
-                      
-                      w <- windshed()
-                      trans <- switch(input$colortrans,
-                                      "square root" = sqrt,
-                                      "linear" = identity,
-                                      "log10" = function(x) log10(x+1))
-                      trans(w)
-                   })
-   })
-   
-   # leaflet basemap
-   output$map <- renderLeaflet({
-      leaflet(options = leafletOptions(minZoom = 2, maxZoom = 7)) %>%
-         setView(lng=coordinates(s)[1], lat=coordinates(s)[2], zoom=4) %>%
-         addProviderTiles(providers$CartoDB.DarkMatter)
-   })
-   
-   # marker for focal site
-   observe({
-      lat <- input$map_click$lat
-      leafletProxy("map") %>%
-         clearMarkers() %>%
-         addAwesomeMarkers(lng=site$ll[1], lat=site$ll[2],
-                           icon=makeAwesomeIcon("send", markerColor="darkred"),
-                           layerId=site$active)
-   })
-   
-   # raster layer
-   observe({
       
-      if(input$palette == "<none>"){
-         
-         leafletProxy("map") %>%
-            clearImages() %>%
-            clearControls()
-         
-      }else{
-         invtrans <- switch(input$colortrans,
-                            "square root" = function(x) x^2,
-                            "linear" = identity,
-                            "log10" = function(x) (10^x)-1  )
-         
-         colors <- switch(input$palette,
-                          "rainbow" = c("cyan", "turquoise", "limegreen", "yellow", "red", "darkorchid", "black"),
-                          "viridis" = rev(c("#440154FF", "#414487FF", "#2A788EFF", "#22A884FF", "#7AD151FF", "#FDE725FF")),
-                          "proton" = c("cyan", "red", "black"),
-                          "verdant" = c("yellowgreen", "green", "forestgreen", "darkgreen", "black"),
-                          "bluetooth" = c("darkblue", "dodgerblue", "lightblue", "white"),
-                          "clownfish" = c("orange", "white"),
-                          "vivelafrance" = c("darkblue", "white", "darkred"))
-         
-         pal <- colorNumeric(colors,
-                             domain = c(0, max(values(w()), na.rm=T)),
-                             na.color = "transparent")
-         
-         leafletProxy("map") %>%
-            clearImages() %>%
-            clearControls() %>%
-            addRasterImage(w(), color=pal, opacity=input$opacity) %>%
-            addLegend(title="wind hours", pal=pal, bins=10, opacity=input$opacity,
-                      values=seq(0, max(values(w()), na.rm=T), length.out=100),
-                      labFormat=labelFormat(transform=invtrans))
-         
-      }
+      # image on about page
+      output$image <- renderImage({
+            list(src = "www/img.jpg",
+                 alt = "windscape")
+      }, deleteFile = FALSE)
+      
+      site <- reactiveValues(point = s, ll = coordinates(s))
+      
+      observeEvent(input$map_click, {
+            s <- data.frame(lat=input$map_click$lat, lon=input$map_click$lng)
+            updateTextInput(session, "lonlat", value = paste(round(s$lon, 2), round(s$lat, 2), sep = ", "))
+            coordinates(s) <- c("lon", "lat")
+            crs(s) <- ll
+            site$point <- s
+            site$ll <- coordinates(s)
+      })
+      
+      observeEvent(input$go, {
+            crds <- as.numeric(str_split(input$lonlat, ", ")[[1]])
+            s <- data.frame(lat=crds[2], lon=crds[1])
+            coordinates(s) <- c("lon", "lat")
+            crs(s) <- ll
+            site$point <- s
+            site$ll <- coordinates(s)
+      })
+      
+      windshed <- reactive({
+            trans <- switch(input$direction,
+                            "downwind (outbound)" = downwind,
+                            "upwind (inbound)" = upwind)
+            w <- accCost(trans, site$ll) %>% "/"(3600)
+            crs(w) <- "+proj=longlat +a=6371229 +b=6371229 +no_defs"
+            d1 <- crop(w, extent(-360, 0, -90, 90)) %>% shift(360)
+            d2 <- crop(w, extent(0, 360, -90, 90))
+            w <- min(stack(d1, d2)) %>% rotate()
+            w
+      })
       
       
+      w <- reactive({
+            withProgress(message = "PROCESSING:", detail="generating windshed",
+                         value = 1, {
+                               
+                               w <- windshed()
+                               trans <- switch(input$colortrans,
+                                               "square root" = sqrt,
+                                               "linear" = identity,
+                                               "log10" = function(x) log10(x+1))
+                               trans(w)
+                         })
+      })
       
-   })
-   
-   # contours
-   observe({
-      withProgress(message = "PROCESSING:", detail="building contours",
-                   value = 1, {
-                      
-                      if(input$contours == 0){
-                         leafletProxy("map") %>% 
-                            clearShapes()
-                      } else{
-                         contours <- rasterToContour(w(), maxpixels=1000000, nlevels=input$contours)
-                         contours <- map(seq(-720, 720, 360), function(x) shift(contours, x)) %>%
-                            do.call("rbind", .)
-                         
-                         leafletProxy("map") %>%
-                            clearShapes() %>%
-                            addPolylines(data=contours, color="white", weight=1, opacity=.5)
-                      }
-                      
-                   })
+      # leaflet basemap
+      output$map <- renderLeaflet({
+            leaflet(options = leafletOptions(minZoom = 2, maxZoom = 7)) %>%
+                  setView(lng=coordinates(s)[1], lat=coordinates(s)[2], zoom=4) %>%
+                  addProviderTiles(providers$CartoDB.DarkMatter)
+      })
       
-   })
-   
-   # data download
-   output$downloadData <- downloadHandler(
-      filename = function() {
-         paste0("windshed_", 
-                round(site$ll[1], 2), "_", round(site$ll[2], 2), 
-                "_", input$direction, ".tif")
-      },
-      content = function(file) {
-         writeRaster(windshed(), file)
-      }
-   )
-   
+      # marker for focal site
+      observe({
+            lat <- input$map_click$lat
+            leafletProxy("map") %>%
+                  clearMarkers() %>%
+                  addAwesomeMarkers(lng=site$ll[1], lat=site$ll[2],
+                                    icon=makeAwesomeIcon("send", markerColor="darkred"),
+                                    layerId=site$active)
+      })
+      
+      # raster layer
+      observe({
+            
+            if(input$palette == "<none>"){
+                  
+                  leafletProxy("map") %>%
+                        clearImages() %>%
+                        clearControls()
+                  
+            }else{
+                  invtrans <- switch(input$colortrans,
+                                     "square root" = function(x) x^2,
+                                     "linear" = identity,
+                                     "log10" = function(x) (10^x)-1  )
+                  
+                  colors <- switch(input$palette,
+                                   "rainbow" = c("cyan", "turquoise", "limegreen", "yellow", "red", "darkorchid", "black"),
+                                   "viridis" = rev(c("#440154FF", "#414487FF", "#2A788EFF", "#22A884FF", "#7AD151FF", "#FDE725FF")),
+                                   "proton" = c("cyan", "red", "black"),
+                                   "verdant" = c("yellowgreen", "green", "forestgreen", "darkgreen", "black"),
+                                   "bluetooth" = c("darkblue", "dodgerblue", "lightblue", "white"),
+                                   "clownfish" = c("orange", "white"),
+                                   "vivelafrance" = c("darkblue", "white", "darkred"))
+                  
+                  pal <- colorNumeric(colors,
+                                      domain = c(0, max(values(w()), na.rm=T)),
+                                      na.color = "transparent")
+                  
+                  leafletProxy("map") %>%
+                        clearImages() %>%
+                        clearControls() %>%
+                        addRasterImage(w(), color=pal, opacity=input$opacity) %>%
+                        addLegend(title="wind hours", pal=pal, bins=10, opacity=input$opacity,
+                                  values=seq(0, max(values(w()), na.rm=T), length.out=100),
+                                  labFormat=labelFormat(transform=invtrans))
+                  
+            }
+            
+            
+            
+      })
+      
+      # contours
+      observe({
+            withProgress(message = "PROCESSING:", detail="building contours",
+                         value = 1, {
+                               
+                               if(input$contours == 0){
+                                     leafletProxy("map") %>% 
+                                           clearShapes()
+                               } else{
+                                     contours <- rasterToContour(w(), maxpixels=1000000, nlevels=input$contours)
+                                     contours <- map(seq(-720, 720, 360), function(x) shift(contours, x)) %>%
+                                           do.call("rbind", .)
+                                     
+                                     leafletProxy("map") %>%
+                                           clearShapes() %>%
+                                           addPolylines(data=contours, color="white", weight=1, opacity=.5)
+                               }
+                               
+                         })
+            
+      })
+      
+      # data download
+      output$downloadData <- downloadHandler(
+            filename = function() {
+                  paste0("windshed_", 
+                         round(site$ll[1], 2), "_", round(site$ll[2], 2), 
+                         "_", input$direction, ".tif")
+            },
+            content = function(file) {
+                  writeRaster(windshed(), file)
+            }
+      )
+      
 }
 
 shinyApp(ui = ui, server = server)
