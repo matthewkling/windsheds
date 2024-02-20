@@ -23,10 +23,9 @@ upwind <- readRDS("data/upwind.rds")
 
 ui <- navbarPage("windscape [beta]",
                  theme = shinytheme("slate"),
+                 tags$head(includeHTML("google-analytics.html")),
+                 
                  tabPanel("tool",
-                          
-                          tags$head(includeHTML("google-analytics.html")),
-                          # tags$head(includeScript("google-analytics.js")),
                           
                           tags$style(type = "text/css", 
                                      "#map {height: calc(100vh - 80px) !important;}
